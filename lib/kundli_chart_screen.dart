@@ -1,14 +1,16 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:kundli/asset_res.dart';
 import 'package:kundli/kundli_chart_data.dart';
-import 'package:kundli/kundli_chart_painter.dart';
+import 'package:kundli/kundli_chart_painter_responsive.dart';
 
 final centricItem = [
   "Moon",
-  "Rahu",
-  "Ketu(Rahu and ketu are in the same radius)",
+
+  "Rahu & Ketu(Rahu and ketu are in the same radius but they are opposite in direction)",
   "Venus",
   "Marcary",
   "Sun",
@@ -30,12 +32,40 @@ class KundliChartScreen extends StatefulWidget {
 
 class _KundliChartScreenState extends State<KundliChartScreen> {
   int _selectedPreset = 0;
-
+  Map<String, ui.Image> _planetImages = const {};
+  List<String> buttonNames = ["Combine", "Rashi", "Bhav"];
+  String _selectedButtonName = "Combine";
   late final List<KundliChartConfig> _presets = [
     _presetOne(),
     _presetTwo(),
     _presetThree(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    findViewItems("Combine");
+    _loadPlanetImages();
+  }
+
+  bool isCombined = true;
+  bool hasRashi = true;
+  void findViewItems(String name) {
+    switch (name) {
+      case "Combine":
+        hasRashi = true;
+        isCombined = true;
+        break;
+      case "Rashi":
+        isCombined = false;
+        hasRashi = true;
+        break;
+      case "Bhav":
+        hasRashi = false;
+        isCombined = false;
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +107,41 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
               }),
             ),
           ),
+          SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+            child: Row(
+              children: List.generate(buttonNames.length, (i) {
+                final bool active = buttonNames[i] == _selectedButtonName;
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: i == 2 ? 0 : 8),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _selectedButtonName = buttonNames[i];
+                          findViewItems(_selectedButtonName);
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: active
+                            ? const Color(0xFFF39508)
+                            : Colors.white,
+                        foregroundColor: active
+                            ? Colors.white
+                            : const Color(0xFF4A4A4A),
+                        elevation: 0,
+                        side: const BorderSide(color: Color(0xFFBDBDBD)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      child: Text(buttonNames[i]),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+          SizedBox(height: 20),
           Expanded(
             child: Center(
               child: Padding(
@@ -92,17 +157,25 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
 
                       return Container(
                         color: Colors.white,
-                        child: Stack(
-                          children: [
-                            ..._buildFixedRashiImages(side),
-                            Positioned.fill(
-                              child: CustomPaint(
-                                painter: KundliChartPainter(
-                                  config: chartConfig,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTapDown: (details) =>
+                              _onChartTap(details, side, chartConfig),
+                          child: Stack(
+                            children: [
+                              if (hasRashi) ..._buildFixedRashiImages(side),
+                              Positioned.fill(
+                                child: CustomPaint(
+                                  painter: KundliChartPainter(
+                                    config: chartConfig,
+                                    planetImages: _planetImages,
+                                    hasRashi: hasRashi,
+                                    isCombine: isCombined,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       );
                     },
@@ -114,6 +187,21 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _loadPlanetImages() async {
+    final Map<String, ui.Image> decoded = {};
+    for (final entry in AssetRes.planetByName.entries) {
+      final ByteData data = await rootBundle.load(entry.value);
+      final ui.Codec codec = await ui.instantiateImageCodec(
+        data.buffer.asUint8List(),
+      );
+      final ui.FrameInfo frame = await codec.getNextFrame();
+      decoded[entry.key] = frame.image;
+    }
+
+    if (!mounted) return;
+    setState(() => _planetImages = decoded);
   }
 
   KundliChartConfig _presetOne() {
@@ -405,6 +493,134 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
       );
     }).toList();
   }
+
+  void _onChartTap(
+    TapDownDetails details,
+    double side,
+    KundliChartConfig config,
+  ) {
+    final ChartPlanet? planet = _hitPlanet(details.localPosition, side, config);
+    if (planet == null) return;
+    _showPlanetDetails(planet);
+  }
+
+  ChartPlanet? _hitPlanet(Offset tap, double side, KundliChartConfig config) {
+    final double outerRadius = side * 0.48;
+    final double maxRadius = outerRadius * 0.80;
+    final double imageSize = (maxRadius * 0.14).clamp(14.0, 22.0);
+    final double hitRadius = imageSize * 0.70;
+    final Offset center = Offset(side / 2, side / 2);
+
+    ChartPlanet? best;
+    double bestDist = double.infinity;
+    for (final planet in config.planets) {
+      final double angle =
+          (config.rotationOffsetDeg - planet.degree) * math.pi / 180;
+      final double radius = maxRadius * _planetRadiusFactor(planet.name);
+      final Offset pos =
+          center + Offset(math.cos(angle), math.sin(angle)) * radius;
+      final double dist = (tap - pos).distance;
+      if (dist <= hitRadius && dist < bestDist) {
+        best = planet;
+        bestDist = dist;
+      }
+    }
+    return best;
+  }
+
+  void _showPlanetDetails(ChartPlanet planet) {
+    final String sign = _zodiacSigns[((planet.degree % 360) / 30).floor() % 12];
+    final double inSign = planet.degree % 30;
+    final int nakIndex = (((planet.degree % 360) / 360) * 27).floor() % 27;
+    final String nak = KundliChartConfig.nakshatraNames[nakIndex];
+    final String? icon =
+        AssetRes.planetByName[planet.name.toLowerCase()] ??
+        (planet.name.toLowerCase() == 'ascendant' ? AssetRes.planetAsc : null);
+
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+
+      builder: (context) {
+        return SizedBox(
+          width: double.infinity,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Column(
+                // mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null)
+                    Image.asset(
+                      icon,
+                      width: 42,
+                      height: 42,
+                      fit: BoxFit.contain,
+                    ),
+                  const SizedBox(height: 10),
+                  Text(
+                    '${planet.name} (${planet.id})',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('Degree: ${planet.degree.toStringAsFixed(2)}°'),
+                  Text('Sign: $sign (${inSign.toStringAsFixed(2)}°)'),
+                  Text('Nakshatra: $nak'),
+                  Text('Retrograde: ${planet.retrograde ? "Yes" : "No"}'),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  double _planetRadiusFactor(String planetName) {
+    switch (planetName.toLowerCase()) {
+      case 'moon':
+        return 0.40;
+      case 'rahu':
+      case 'ketu':
+        return 0.50;
+      case 'venus':
+        return 0.58;
+      case 'mercury':
+      case 'marcary':
+        return 0.66;
+      case 'sun':
+        return 0.74;
+      case 'mars':
+        return 0.82;
+      case 'jupiter':
+        return 0.88;
+      case 'ascendant':
+      case 'asc':
+        return 0.94;
+      case 'saturn':
+        return 1.00;
+      default:
+        return 0.74;
+    }
+  }
+
+  static const List<String> _zodiacSigns = [
+    'Aries',
+    'Taurus',
+    'Gemini',
+    'Cancer',
+    'Leo',
+    'Virgo',
+    'Libra',
+    'Scorpio',
+    'Sagittarius',
+    'Capricorn',
+    'Aquarius',
+    'Pisces',
+  ];
 }
 
 class _RashiFixedPos {
