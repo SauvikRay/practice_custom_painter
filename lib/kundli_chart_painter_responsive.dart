@@ -169,10 +169,13 @@ class KundliChartPainter extends CustomPainter {
     final double imageSize = (maxRadius * 0.14).clamp(14.0, 22.0);
     final double labelFont = (maxRadius * 0.10).clamp(11.0, 14.0);
     final double labelDy = -(imageSize * 0.9);
+    final Map<int, double> radiusFactors = buildPlanetRadiusFactors(config.planets);
 
-    for (final ChartPlanet planet in config.planets) {
+    for (int i = 0; i < config.planets.length; i++) {
+      final ChartPlanet planet = config.planets[i];
       final double angle = _degToRad(planet.degree);
-      final double radius = maxRadius * _planetRadiusFactor(planet.name);
+      final double radius =
+          maxRadius * (radiusFactors[i] ?? planetBaseRadiusFactor(planet.name));
       final Offset position =
           center + Offset(math.cos(angle), math.sin(angle)) * radius;
 
@@ -248,34 +251,6 @@ class KundliChartPainter extends CustomPainter {
     final String name = planet.name.toLowerCase();
     if (name == 'ascendant') return 'asc';
     return name;
-  }
-
-  double _planetRadiusFactor(String planetName) {
-    switch (planetName.toLowerCase()) {
-      case 'moon':
-        return 0.40;
-      case 'rahu':
-      case 'ketu':
-        return 0.50;
-      case 'venus':
-        return 0.58;
-      case 'mercury':
-      case 'marcary':
-        return 0.66;
-      case 'sun':
-        return 0.74;
-      case 'mars':
-        return 0.82;
-      case 'jupiter':
-        return 0.88;
-      case 'ascendant':
-      case 'asc':
-        return 0.94;
-      case 'saturn':
-        return 1.00;
-      default:
-        return 0.74;
-    }
   }
 
   void _paintText(Canvas canvas, String text, Offset center, TextStyle style) {

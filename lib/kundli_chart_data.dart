@@ -102,3 +102,90 @@ class KundliChartConfig {
     ],
   );
 }
+
+double planetBaseRadiusFactor(String planetName) {
+  switch (planetName.toLowerCase()) {
+    case 'moon':
+      return 0.40;
+    case 'rahu':
+    case 'ketu':
+      return 0.50;
+    case 'venus':
+      return 0.58;
+    case 'mercury':
+    case 'marcary':
+      return 0.66;
+    case 'sun':
+      return 0.74;
+    case 'mars':
+      return 0.82;
+    case 'jupiter':
+      return 0.88;
+    case 'ascendant':
+    case 'asc':
+      return 0.94;
+    case 'saturn':
+      return 1.00;
+    default:
+      return 0.74;
+  }
+}
+
+Map<int, double> buildPlanetRadiusFactors(
+  List<ChartPlanet> planets, {
+  double clusterThresholdDeg = 12,
+  double radiusStep = 0.028,
+}) {
+  if (planets.isEmpty) return const {};
+
+  final List<int> sorted = List<int>.generate(planets.length, (i) => i)
+    ..sort((a, b) => _normalizeDeg(planets[a].degree).compareTo(
+          _normalizeDeg(planets[b].degree),
+        ));
+
+  final List<List<int>> clusters = <List<int>>[];
+  List<int> current = <int>[sorted.first];
+
+  for (int i = 1; i < sorted.length; i++) {
+    final int prev = sorted[i - 1];
+    final int next = sorted[i];
+    final double prevDeg = _normalizeDeg(planets[prev].degree);
+    final double nextDeg = _normalizeDeg(planets[next].degree);
+    if (nextDeg - prevDeg <= clusterThresholdDeg) {
+      current.add(next);
+    } else {
+      clusters.add(current);
+      current = <int>[next];
+    }
+  }
+  clusters.add(current);
+
+  if (clusters.length > 1) {
+    final List<int> first = clusters.first;
+    final List<int> last = clusters.last;
+    final double firstDeg = _normalizeDeg(planets[first.first].degree);
+    final double lastDeg = _normalizeDeg(planets[last.last].degree);
+    if (360 - lastDeg + firstDeg <= clusterThresholdDeg) {
+      clusters[0] = <int>[...last, ...first];
+      clusters.removeLast();
+    }
+  }
+
+  final Map<int, double> factors = <int, double>{};
+  for (final List<int> cluster in clusters) {
+    for (int i = 0; i < cluster.length; i++) {
+      final int index = cluster[i];
+      final double centeredOffset = i - (cluster.length - 1) / 2;
+      final double factor =
+          planetBaseRadiusFactor(planets[index].name) + centeredOffset * radiusStep;
+      factors[index] = factor.clamp(0.36, 1.06);
+    }
+  }
+  return factors;
+}
+
+double _normalizeDeg(double d) {
+  double v = d % 360;
+  if (v < 0) v += 360;
+  return v;
+}

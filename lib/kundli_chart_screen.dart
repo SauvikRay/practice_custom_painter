@@ -506,20 +506,30 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
     final double maxRadius = outerRadius * 0.80;
     final double imageSize = (maxRadius * 0.14).clamp(14.0, 22.0);
     final double hitRadius = imageSize * 0.70;
+    final double labelDy = -(imageSize * 0.9);
+    final double labelHitRadius = imageSize * 0.85;
     final Offset center = Offset(side / 2, side / 2);
+    final Map<int, double> radiusFactors = buildPlanetRadiusFactors(config.planets);
 
     ChartPlanet? best;
     double bestDist = double.infinity;
-    for (final planet in config.planets) {
+    for (int i = 0; i < config.planets.length; i++) {
+      final ChartPlanet planet = config.planets[i];
       final double angle =
           (config.rotationOffsetDeg - planet.degree) * math.pi / 180;
-      final double radius = maxRadius * _planetRadiusFactor(planet.name);
+      final double radius =
+          maxRadius * (radiusFactors[i] ?? planetBaseRadiusFactor(planet.name));
       final Offset pos =
           center + Offset(math.cos(angle), math.sin(angle)) * radius;
-      final double dist = (tap - pos).distance;
-      if (dist <= hitRadius && dist < bestDist) {
+      final Offset labelPos = pos + Offset(0, labelDy);
+      final double iconDist = (tap - pos).distance;
+      final double labelDist = (tap - labelPos).distance;
+      final bool hitIcon = iconDist <= hitRadius;
+      final bool hitLabel = labelDist <= labelHitRadius;
+      final double effectiveDist = math.min(iconDist, labelDist);
+      if ((hitIcon || hitLabel) && effectiveDist < bestDist) {
         best = planet;
-        bestDist = dist;
+        bestDist = effectiveDist;
       }
     }
     return best;
@@ -574,34 +584,6 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
         );
       },
     );
-  }
-
-  double _planetRadiusFactor(String planetName) {
-    switch (planetName.toLowerCase()) {
-      case 'moon':
-        return 0.40;
-      case 'rahu':
-      case 'ketu':
-        return 0.50;
-      case 'venus':
-        return 0.58;
-      case 'mercury':
-      case 'marcary':
-        return 0.66;
-      case 'sun':
-        return 0.74;
-      case 'mars':
-        return 0.82;
-      case 'jupiter':
-        return 0.88;
-      case 'ascendant':
-      case 'asc':
-        return 0.94;
-      case 'saturn':
-        return 1.00;
-      default:
-        return 0.74;
-    }
   }
 
   static const List<String> _zodiacSigns = [
