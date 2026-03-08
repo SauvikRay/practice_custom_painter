@@ -1,29 +1,18 @@
 class AssetRes {
   const AssetRes._();
 
-  static const String aquarius =
-      'assets/rashi_image/aquarius-horoscope-AppliedJyotish.png';
-  static const String aries =
-      'assets/rashi_image/aries-horoscope-AppliedJyotish.png';
-  static const String cancer =
-      'assets/rashi_image/cancer-horoscope-AppliedJyotish.png';
-  static const String capricorn =
-      'assets/rashi_image/capricorn-horoscope-AppliedJyotish.png';
-  static const String gemini =
-      'assets/rashi_image/gemini-horoscope-AppliedJyotish.png';
-  static const String leo = 'assets/rashi_image/leo-horoscope-AppliedJyotish.png';
-  static const String libra =
-      'assets/rashi_image/libra-horoscope-AppliedJyotish.png';
-  static const String pisces =
-      'assets/rashi_image/pisces-horoscope-AppliedJyotish.png';
-  static const String sagittarius =
-      'assets/rashi_image/sagittarius-horoscope-AppliedJyotish.png';
-  static const String scorpio =
-      'assets/rashi_image/scorpio-horoscope-AppliedJyotish.png';
-  static const String taurus =
-      'assets/rashi_image/taurus-horoscope-AppliedJyotish.png';
-  static const String virgo =
-      'assets/rashi_image/virgo-horoscope-AppliedJyotish.png';
+  static const String aquarius = 'assets/rashi_image/Aquarius.png';
+  static const String aries = 'assets/rashi_image/Aries.png';
+  static const String cancer = 'assets/rashi_image/Cancer.png';
+  static const String capricorn = 'assets/rashi_image/Capricorn.png';
+  static const String gemini = 'assets/rashi_image/Gemini.png';
+  static const String leo = 'assets/rashi_image/Leo.png';
+  static const String libra = 'assets/rashi_image/Libra.png';
+  static const String pisces = 'assets/rashi_image/Pisces.png';
+  static const String sagittarius = 'assets/rashi_image/Sagittarius.png';
+  static const String scorpio = 'assets/rashi_image/Scorpio.png';
+  static const String taurus = 'assets/rashi_image/Taurus.png';
+  static const String virgo = 'assets/rashi_image/Virgo.png';
 
   static const String planetAsc = 'assets/planets/asc.png';
   static const String planetJupiter = 'assets/planets/jupiter.png';

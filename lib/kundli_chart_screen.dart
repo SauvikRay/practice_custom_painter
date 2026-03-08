@@ -485,10 +485,7 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
         width: imageSize,
         height: imageSize,
         child: IgnorePointer(
-          child: Opacity(
-            opacity: 0.22,
-            child: Image.asset(item.asset, fit: BoxFit.contain),
-          ),
+          child: Image.asset(item.asset, fit: BoxFit.contain),
         ),
       );
     }).toList();
